@@ -2,6 +2,6 @@ package iam
 
 import "fmt"
 
-func example() {
+func Example() {
 	fmt.Println("example")
 }
