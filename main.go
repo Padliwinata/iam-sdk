@@ -62,7 +62,7 @@ func DecodeWithSecret(accessToken string, secretKey string) (map[string]interfac
 
 func CheckAuth(accessToken string, secretKey string) bool {
 	_, err := DecodeWithSecret(accessToken, secretKey)
-	return err != nil
+	return err == nil
 }
 
 func CheckPermission(accessToken string, secretKey string, scope string) bool {
