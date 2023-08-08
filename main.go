@@ -2,15 +2,19 @@ package iam
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
-	"encoding/json"
+	"strings"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 func Decode(client string, token string) (map[string]interface{}, error) {
-	data := map[string]interface{} {
+	data := map[string]interface{}{
 		"client": client,
-		"token": token,
+		"token":  token,
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -35,4 +39,56 @@ func Decode(client string, token string) (map[string]interface{}, error) {
 	}
 
 	return responseMap, nil
+}
+
+func DecodeWithSecret(accessToken string, secretKey string) (map[string]interface{}, error) {
+	secret := []byte(secretKey)
+
+	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
+		return secret, nil
+	})
+
+	if err != nil {
+		return nil, errors.New("Invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("Failed to parse claims")
+	} else {
+		return claims, nil
+	}
+}
+
+func CheckAuth(accessToken string, secretKey string) bool {
+	_, err := DecodeWithSecret(accessToken, secretKey)
+	return err != nil
+}
+
+func CheckPermission(accessToken string, secretKey string, scope string) bool {
+	claims, err := DecodeWithSecret(accessToken, secretKey)
+	if err != nil {
+		return false
+	}
+
+	scopes, exists := claims["role"]
+
+	if !exists {
+		return false
+	}
+
+	scopesString, ok := scopes.(string)
+	if !ok {
+		return false
+	}
+	scopesArray := strings.Split(scopesString, " ")
+
+	for _, str := range scopesArray {
+		if str == scope {
+			return true
+		}
+	}
+
+	return false
+
 }
