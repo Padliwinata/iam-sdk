@@ -1,94 +1,28 @@
-package iam
+package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"net/http"
-	"strings"
+	"fmt"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/Padliwinata/iam-sdk/iam"
 )
 
-func Decode(client string, token string) (map[string]interface{}, error) {
-	data := map[string]interface{}{
-		"client": client,
-		"token":  token,
-	}
+func main() {
+	token := "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vb3NzLklELmRvbWFpbi5jb20iLCJzdWIiOiJkb21haW58NjRjY2E3ZDM0YmI0OGI2MDhkM2JkZjM2IiwiYXVkIjpbImh0dHA6Ly9sb2NhbGhvc3Q6ODA4MSIsImh0dHA6Ly9sb2NhbGhvc3Q6ODA4MSIsImh0dHA6Ly9sb2NhbGhvc3Q6ODA4MS9sb2dpbi1zdWNjZXNzIl0sImF6cCI6IjY0Y2NhNjYzNGJiNDhiNjA4ZDNiZGYzMSIsImV4cCI6MTY5NDU4NTI3NiwiaWF0IjoxNjkxOTkzMjc2LCJzY29wZXMiOiJlbWFpbCBvcGVuaWQgcHJvZmlsZSB1c2VyOmNyZWF0ZSB1c2VyOnJlYWQifQ.fMdGyGwjAJncvJYkn3FlFWSv6-T0Y38gLibfbedIS9M"
+	secretKey := "$2b$04$VFIar.GWpZXLQqLk3sVoEehKdaHuU2JJoY6j5J.2g9AsHZFR8SkAu"
 
-	jsonData, err := json.Marshal(data)
+	claims, err := iam.DecodeWithSecret(token, secretKey)
 	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.Post("https://fastapiiam-1-i2172913.deta.app/decode", "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, err
-	}
-
-	responseData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var responseMap map[string]interface{}
-	err = json.Unmarshal(responseData, &responseMap)
-	if err != nil {
-		return nil, err
-	}
-
-	return responseMap, nil
-}
-
-func DecodeWithSecret(accessToken string, secretKey string) (map[string]interface{}, error) {
-	secret := []byte(secretKey)
-
-	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
-		return secret, nil
-	})
-
-	if err != nil {
-		return nil, errors.New("Invalid token")
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, errors.New("Failed to parse claims")
+		fmt.Println("Error decoding:", err)
 	} else {
-		return claims, nil
-	}
-}
-
-func CheckAuth(accessToken string, secretKey string) bool {
-	_, err := DecodeWithSecret(accessToken, secretKey)
-	return err == nil
-}
-
-func CheckPermission(accessToken string, secretKey string, scope string) bool {
-	claims, err := DecodeWithSecret(accessToken, secretKey)
-	if err != nil {
-		return false
+		fmt.Println("Token berhasil di decode!")
+		fmt.Println("Claims:", claims)
 	}
 
-	scopes, exists := claims["role"]
+	isAuthenticated := iam.CheckAuth(token, secretKey)
+	fmt.Println("Is authenticated:", isAuthenticated)
 
-	if !exists {
-		return false
+	if scope, ok := claims["scopes"].(string); ok {
+		hasPermission := iam.CheckPermission(token, secretKey, scope)
+		fmt.Println("Has permission:", hasPermission)
 	}
-
-	scopesString, ok := scopes.(string)
-	if !ok {
-		return false
-	}
-	scopesArray := strings.Split(scopesString, " ")
-
-	for _, str := range scopesArray {
-		if str == scope {
-			return true
-		}
-	}
-
-	return false
-
 }
