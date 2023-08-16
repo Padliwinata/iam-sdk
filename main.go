@@ -71,7 +71,7 @@ func CheckPermission(accessToken string, secretKey string, scope string) bool {
 		return false
 	}
 
-	scopes, exists := claims["role"]
+	scopes, exists := claims["scopes"]
 
 	if !exists {
 		return false
