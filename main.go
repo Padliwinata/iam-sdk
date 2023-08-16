@@ -25,4 +25,5 @@ func main() {
 		hasPermission := iam.CheckPermission(token, secretKey, scope)
 		fmt.Println("Has permission:", hasPermission)
 	}
+
 }
